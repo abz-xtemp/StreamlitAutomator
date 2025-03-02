@@ -1,0 +1,7 @@
+yes sure. Also, write the automation scripts for the same. i will provide a description and input needed for each
+1.day movement- calculates the daily change in values form a certain sheet cell range. input 2 excel files, sheet name, sheet ranges
+2.excel to ppt- converts excel cells to be added in ppt as image. input ppt(if any else create new) excel file, sheet name, cell range, slide number, slide ht,width, left, top, excel password (if any). also provide some default image ratio options
+3.ppt to pdf- converts ppt to pdf. input ppt
+4.Update ppt- alters slide order. input ppt and slides selected and new order selection, make the UI responsive for this case
+5.Merge ppt- mergers 2 ppt. input 2 ppt and slide to merge from ppt A to which index in ppt B
+for the rest i will provide you with the code i am working on. please make it all usable by streamlit and change the ui for the inputs respectively.
