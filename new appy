@@ -1,0 +1,168 @@
+# streamlit_app.py
+
+import streamlit as st
+import os
+import tempfile
+from automation_scripts import *
+
+# Configure the page
+st.set_page_config(page_title="Automation Hub", layout="wide")
+
+
+def save_uploaded_file(uploaded_file):
+    """Save uploaded file to a temporary directory and return the file path"""
+    if uploaded_file is not None:
+        temp_dir = tempfile.mkdtemp()
+        file_path = os.path.join(temp_dir, uploaded_file.name)
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        return file_path
+    return None
+
+
+def provide_download_button(file_output, label="Download Processed File", file_name="processed_file.xlsx"):
+    """Create a download button for the processed file, now handles bytes or filepath"""
+    if file_output:
+        if isinstance(file_output, bytes):
+            st.download_button(label=label, data=file_output, file_name=file_name, mime="application/octet-stream")
+        elif os.path.exists(file_output):
+            with open(file_output, "rb") as f:
+                st.download_button(label=label, data=f, file_name=os.path.basename(file_output), mime="application/octet-stream")
+        else:
+            st.error(file_output)
+    else:
+        st.error("No output file generated.")
+
+
+def display_error_for_missing_inputs(required_inputs):
+    """Display error if any required inputs are missing"""
+    missing = [name for name, value in required_inputs.items() if not value]
+    if missing:
+        st.error(f"Missing required input(s): {', '.join(missing)}")
+        return True
+    return False
+
+
+def main():
+    st.title("🔄 Automation Hub")
+    st.subheader("Run automation tasks on your Excel and PowerPoint files")
+
+    # Create a sidebar for task selection
+    with st.sidebar:
+        st.header("Task Selection")
+        automation_task = st.selectbox(
+            "Select an automation task",
+            [
+                "Day Movement",
+                "Excel to PPT",
+                "PPT to PDF",
+                "Update PPT",
+                "Merge PPT",
+                "Power Query",
+                "Validation",
+                "Consolidation",
+                "Roll Over",
+                "Staging",
+                "Trend Check",
+            ],
+        )
+
+    # Main area for task-specific inputs
+    with st.container():
+        st.write(f"## {automation_task}")
+
+        # Initialize output_file to None
+        output_file = None
+
+        if automation_task == "Day Movement":
+            file1 = st.file_uploader("Upload Excel File 1", type=["xls", "xlsx"])
+            file2 = st.file_uploader("Upload Excel File 2", type=["xls", "xlsx"])
+            sheet_name = st.text_input("Enter Sheet Name")
+            cell_range = st.text_input("Enter Cell Range (e.g., A1:B10)")
+
+            required = {"Excel File 1": file1, "Excel File 2": file2, "Sheet Name": sheet_name, "Cell Range": cell_range}
+
+            if st.button("Run Day Movement") and not display_error_for_missing_inputs(required):
+                with st.spinner("Processing Day Movement..."):
+                    output_file = day_movement(save_uploaded_file(file1), save_uploaded_file(file2), sheet_name, cell_range)
+                    st.success("Day Movement Completed Successfully!")
+
+        elif automation_task == "Excel to PPT":
+            ppt_file = st.file_uploader("Upload PPT File (Optional)", type=["pptx"])
+            excel_file = st.file_uploader("Upload Excel File", type=["xls", "xlsx"])
+            sheet_name = st.text_input("Enter Sheet Name")
+            cell_range = st.text_input("Enter Cell Range")
+            slide_number = st.number_input("Slide Number", min_value=1, value=1)
+            height = st.number_input("Slide Height", min_value=1, value=400)
+            width = st.number_input("Slide Width", min_value=1, value=600)
+            left = st.number_input("Image Left Position", value=50)
+            top = st.number_input("Image Top Position", value=50)
+            password = st.text_input("Excel Password (Optional)", type="password")
+
+            required = {"Excel File": excel_file, "Sheet Name": sheet_name, "Cell Range": cell_range}
+
+            if st.button("Run Excel to PPT") and not display_error_for_missing_inputs(required):
+                with st.spinner("Converting Excel to PPT..."):
+                    output_file = excel_to_ppt(
+                        save_uploaded_file(ppt_file),
+                        save_uploaded_file(excel_file),
+                        sheet_name,
+                        cell_range,
+                        slide_number,
+                        height,
+                        width,
+                        left,
+                        top,
+                        password,
+                    )
+                    st.success("Excel to PPT Conversion Completed!")
+
+        elif automation_task == "PPT to PDF":
+            ppt_file = st.file_uploader("Upload PPT File", type=["pptx"])
+            required = {"PPT File": ppt_file}
+
+            if st.button("Convert to PDF") and not display_error_for_missing_inputs(required):
+                with st.spinner("Converting PPT to PDF..."):
+                    output_file = ppt_to_pdf(save_uploaded_file(ppt_file))
+                    st.success("PPT to PDF Conversion Completed!")
+
+        elif automation_task == "Update PPT":
+            ppt_file = st.file_uploader("Upload PPT File", type=["pptx"])
+            slides = st.text_input("Enter Slides to Update (Comma Separated)")
+            new_order = st.text_input("Enter New Slide Order (Comma Separated)")
+
+            required = {"PPT File": ppt_file, "Slides to Update": slides, "New Slide Order": new_order}
+
+            if st.button("Update PPT") and not display_error_for_missing_inputs(required):
+                with st.spinner("Updating PPT..."):
+                    output_file = update_ppt(save_uploaded_file(ppt_file), slides, new_order)
+                    st.success("PPT Updated Successfully!")
+
+        elif automation_task == "Merge PPT":
+            ppt_a = st.file_uploader("Upload First PPT", type=["pptx"])
+            ppt_b = st.file_uploader("Upload Second PPT", type=["pptx"])
+            slide_index = st.number_input("Slide Number from PPT A", min_value=1, value=1)
+            merge_index = st.number_input("Merge at Index in PPT B", min_value=1, value=1)
+
+            required = {"First PPT": ppt_a, "Second PPT": ppt_b}
+
+            if st.button("Merge PPTs") and not display_error_for_missing_inputs(required):
+                with st.spinner("Merging PPTs..."):
+                    output_file = merge_ppt(save_uploaded_file(ppt_a), save_uploaded_file(ppt_b), slide_index, merge_index)
+                    st.success("PPTs Merged Successfully!")
+
+        # Provide download button if there's an output file
+        if output_file:
+            st.subheader("Output")
+            if automation_task in ["Day Movement", "Power Query", "Validation", "Consolidation", "Roll Over", "Staging", "Trend Check"]:
+                provide_download_button(output_file, file_name="output.xlsx")
+            elif automation_task == "Excel to PPT":
+                provide_download_button(output_file, file_name="output.pptx")
+            elif automation_task == "PPT to PDF":
+                provide_download_button(output_file, file_name="output.pdf")
+            elif automation_task == "Update PPT" or automation_task == "Merge PPT":
+                provide_download_button(output_file, file_name="output.pptx")
+
+
+if __name__ == "__main__":
+    main()
